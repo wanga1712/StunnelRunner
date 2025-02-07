@@ -1,12 +1,23 @@
 import subprocess
 from loguru import logger
 import os
+import configparser
 
 
 class StunnelRunner:
-    def __init__(self, stunnel_dir: str, config_file: str):
-        self.stunnel_dir = stunnel_dir
-        self.config_file = config_file
+    def __init__(self, config_file: str):
+        # Загружаем конфигурационный файл
+        self.config = self.load_config(config_file)
+
+        # Получаем настройки из конфигурационного файла
+        self.stunnel_dir = self.config.get('stunnel', 'stunnel_dir')
+        self.config_file = self.config.get('stunnel', 'config_file')
+
+    def load_config(self, config_file):
+        """Загружает конфигурационный файл."""
+        config = configparser.ConfigParser()
+        config.read(config_file, encoding='utf-8')
+        return config
 
     def run_stunnel(self):
         """Запускает stunnel с конфигурационным файлом и перенаправляет логи в файл."""
@@ -18,7 +29,7 @@ class StunnelRunner:
 
         try:
             # Выполняем команду через subprocess
-            logger.info(f"Выполнение команды: {command}")
+            logger.info(f"Запускаю stunnel: {command}")
             proc = subprocess.Popen(command, cwd=self.stunnel_dir, shell=True)
             proc.communicate()  # Дожидаемся завершения процесса
 
