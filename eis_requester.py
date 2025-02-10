@@ -2,34 +2,27 @@ from loguru import logger
 import configparser
 from datetime import datetime, timezone
 import uuid
-from dotenv import load_dotenv
-import os
 
-from secondary_functions import get_region_codes
+from secondary_functions import get_region_codes, load_token, load_config
 
 
 class EISRequester:
-    def __init__(self, config_path="config.ini", env_path="C:\\Users\\wangr\\PycharmProjects\\TenderMonitor\\brum.env"):
+    def __init__(self, config_path="config.ini"):
         # Загружаем настройки из конфигурации
-        self.config = configparser.ConfigParser()
-        try:
-            with open(config_path, encoding="utf-8") as f:
-                self.config.read_file(f)
-            logger.info("Файл конфигурации загружен успешно.")
-        except UnicodeDecodeError:
-            logger.error(f"Ошибка кодировки при чтении конфигурации: {config_path}")
-            return
+        self.config = load_config(config_path)
+        if not self.config:
+            raise ValueError("Ошибка загрузки конфигурации!")
 
-        # Загружаем токен из .env файла
-        self.token = self.load_token(env_path)
+        # Загружаем токен
+        self.token = load_token(self.config)
 
         # Настройки из конфигурации
         self.date = self.config.get("eis", "date")
-        # logger.info(f"Дата: {self.date}")
+        logger.info(f"Дата: {self.date}")
 
         # Получаем регионы с помощью get_region_codes
-        self.regions = get_region_codes()
-        # logger.info(f"Регионы: {self.regions}")
+        regions_file = self.config.get("path", "regions_file", fallback=None)
+        self.regions = get_region_codes(regions_file)
 
         # Получаем подсистемы для запроса по 44ФЗ из конфигурации
         self.subsystems_44 = [s.strip() for s in self.config.get("eis", "subsystems_44").split(",")]
@@ -54,17 +47,6 @@ class EISRequester:
         # Получаем типы документов для подсистемы 'протоколы подведения итогов'
         self.documentType223_RD223 = [doc.strip() for doc in self.config.get("eis", "documentType223_RD223").split(",")]
         # logger.info(f'протоколы 223ФЗ {self.documentType223_RD223}')
-
-    def load_token(self, env_path):
-        """Загружает токен из .env файла"""
-        load_dotenv(env_path)  # Загружаем .env файл
-        token = os.getenv("TOKEN")  # Читаем переменную TOKEN
-        if token:
-            logger.info(f"Токен загружен успешно. {token}")
-            return token
-        else:
-            logger.error("Токен не найден в .env файле.")
-            return None
 
     def get_current_time_utc(self):
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
