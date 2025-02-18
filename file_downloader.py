@@ -5,6 +5,8 @@ from urllib.parse import urlparse
 from loguru import logger
 from secondary_functions import load_config, load_token
 
+from archive_extractor import ArchiveExtractor
+
 
 class FileDownloader:
     def __init__(self, config_path="config.ini"):
@@ -18,31 +20,40 @@ class FileDownloader:
         if not self.token:
             raise ValueError("Токен не найден! Проверьте .env файл.")
 
-        # Папка для сохранения файлов
-        self.save_path = self.config.get("path", "download_dir", fallback="downloads")
-        os.makedirs(self.save_path, exist_ok=True)
+        # Создаем объект для разархивации
+        self.archive_extractor = ArchiveExtractor(config_path)
 
-        logger.info(f"Файлы будут сохраняться в: {self.save_path}")
+        logger.info("Конфигурация и токен загружены успешно.")
 
-    def download_files(self, urls):
-        """Скачивает файлы по переданному списку URL."""
+    def download_files(self, urls, document_type):
+        """Скачивает файлы по переданному списку URL и сохраняет их в нужную папку в зависимости от типа документа"""
+        document_types = [doc_type.strip() for doc_type in self.config.get("eis", "documentType44_PRIZ").split(",")]
+
+        # Определяем путь для сохранения в зависимости от типа документа
+        if document_type in document_types:
+            logger.info(f"Проверяемый тип документа: '{document_type}'")
+            save_path = "F:\\Программирование\\Парсинг ЕИС\\44_FZ\\xml_reestr_44_fz_new_contracts"
+        elif document_type in self.config.get("eis", "documentType44_RGK").split(","):
+            save_path = "F:\\Программирование\\Парсинг ЕИС\\44_FZ\\xml_reestr_44_new_contracts_recouped"
+        elif document_type in self.config.get("eis", "documentType223_RI223").split(","):
+            save_path = "F:\\Программирование\\Парсинг ЕИС\\223_FZ\\xml_reestr_223_fz_new_contracts"
+        elif document_type in self.config.get("eis", "documentType223_RD223").split(","):
+            save_path = "F:\\Программирование\\Парсинг ЕИС\\223_FZ\\xml_reestr_new_223_contracts_recouped"
+        else:
+            logger.error(f"Не найден путь для типа документа: {document_type}")
+            return None
+
         for url in urls:
             try:
                 parsed_url = urlparse(url)
                 filename = os.path.basename(parsed_url.path) or f"file_{uuid.uuid4().hex[:8]}.zip"
-                file_path = os.path.join(self.save_path, filename)
+                file_path = os.path.join(save_path, filename)
 
                 logger.info(f"Скачивание {url} в {file_path}...")
 
                 headers = {'individualPerson_token': self.token}
 
                 response = requests.get(url, stream=True, headers=headers, timeout=120)
-                logger.info(f"Ответ сервера: {response.status_code} {response.reason}")
-
-                if response.status_code == 401:
-                    logger.error(f"Ошибка авторизации при скачивании {url}: {response.text}")
-                    continue
-
                 response.raise_for_status()
 
                 with open(file_path, "wb") as file:
@@ -51,12 +62,11 @@ class FileDownloader:
 
                 logger.info(f"Файл сохранен: {file_path}")
 
+                # После скачивания сразу разархивируем файл
+                self.archive_extractor.unzip_files(save_path)
+
             except requests.exceptions.RequestException as e:
                 logger.error(f"Ошибка при скачивании {url}: {e}")
 
+        return save_path  # Возвращаем путь, в который были сохранены архивы
 
-# Тестирование
-if __name__ == "__main__":
-    downloader = FileDownloader(config_path="config.ini")
-    test_urls = ["https://example.com/file1.zip", "https://example.com/file2.zip"]
-    downloader.download_files(test_urls)
