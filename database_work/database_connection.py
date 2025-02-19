@@ -1,0 +1,65 @@
+from loguru import logger
+import os
+import psycopg2
+from dotenv import load_dotenv
+
+class DatabaseManager:
+    """
+    Класс для управления подключением и взаимодействием с базой данных.
+
+    Атрибуты:
+        connection (psycopg2.extensions.connection): Объект соединения с базой данных.
+        cursor (psycopg2.extensions.cursor): Курсор для выполнения SQL-запросов к базе данных.
+        db_host (str): Хост базы данных.
+        db_name (str): Название базы данных.
+        db_user (str): Имя пользователя базы данных.
+        db_password (str): Пароль пользователя базы данных.
+        db_port (str): Порт подключения к базе данных.
+        zip_directory (str): Директория для хранения ZIP-архивов.
+    """
+
+    def __init__(self):
+        """
+        Инициализация объекта DatabaseManager.
+
+        Загружает настройки подключения из файла .env, устанавливает соединение с базой данных и инициализирует курсор.
+
+        Исключения:
+            Exception: В случае ошибки подключения к базе данных.
+        """
+        # Загружаем переменные окружения из файла .env
+        load_dotenv(dotenv_path=r'C:\Users\wangr\PycharmProjects\TenderMonitor\database_work\db_credintials.env')
+
+        # Получаем данные для подключения к базе данных
+        self.db_host = os.getenv("DB_HOST")
+        self.db_name = os.getenv("DB_DATABASE")
+        self.db_user = os.getenv("DB_USER")
+        self.db_password = os.getenv("DB_PASSWORD")
+        self.db_port = os.getenv("DB_PORT")
+
+        try:
+            # Устанавливаем соединение с базой данных
+            self.connection = psycopg2.connect(
+                database=self.db_name,
+                user=self.db_user,
+                password=self.db_password,
+                host=self.db_host,
+                port=self.db_port
+            )
+
+            # Инициализируем курсор для выполнения операций с базой данных
+            self.cursor = self.connection.cursor()
+            logger.debug('Подключился к базе данных.')
+        except Exception as e:
+            # Логируем и выбрасываем исключение в случае ошибки подключения
+            logger.exception(f'Ошибка подключения к базе данных: {e}')
+
+    def execute_query(self, query, params):
+        """
+        Выполняет SQL-запрос.
+        :param query: SQL-запрос
+        :param params: параметры запроса
+        :return: результат выполнения запроса
+        """
+        self.cursor.execute(query, params)
+        return self.cursor.fetchall()
