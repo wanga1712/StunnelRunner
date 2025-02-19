@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 import uuid
 import requests
 
-from secondary_functions import get_region_codes, load_token, load_config
+from secondary_functions import load_token, load_config
+from database_work.database_requests import get_region_codes
 from utils import XMLParser  # Импорт класса с функцией extract_archive_urls
 from file_downloader import FileDownloader  # Импорт класса с функцией download_files
 
@@ -34,8 +35,7 @@ class EISRequester:
         logger.info(f"Дата: {self.date}")  # Логируем текущую дату
 
         # Получаем список регионов из файла с кодами регионов
-        regions_file = self.config.get("path", "regions_file", fallback=None)
-        self.regions = get_region_codes(regions_file)
+        self.regions = get_region_codes()
 
         # Загружаем подсистемы для запроса по 44-ФЗ из конфигурации
         self.subsystems_44 = [s.strip() for s in self.config.get("eis", "subsystems_44").split(",")]
@@ -79,8 +79,6 @@ class EISRequester:
         :param document_type: Тип документа (например, извещение или протокол).
         :return: Сформированный SOAP-запрос в виде строки.
         """
-        # Преобразуем код региона в строку с двумя символами, дополняем нулями, если необходимо
-        region_code_str = str(region_code).zfill(2)
 
         # Генерация уникального идентификатора для запроса
         id_value = str(uuid.uuid4())
@@ -102,7 +100,7 @@ class EISRequester:
                         <mode>PROD</mode>
                     </index>
                     <selectionParams>
-                        <orgRegion>{region_code_str}</orgRegion>
+                        <orgRegion>{region_code}</orgRegion>
                         <subsystemType>{subsystem}</subsystemType>
                         <documentType44>{document_type}</documentType44>
                         <periodInfo>
@@ -116,7 +114,7 @@ class EISRequester:
 
         # Логируем информацию о сформированном запросе
         logger.info(
-            f"Запрос для региона {region_code_str}, подсистемы {subsystem}, документа {document_type} сформирован.")
+            f"Запрос для региона {region_code}, подсистемы {subsystem}, документа {document_type} сформирован.")
 
         # Возвращаем сформированный SOAP-запрос
         return soap_request
