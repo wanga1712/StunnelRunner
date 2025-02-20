@@ -41,22 +41,28 @@ class FileDownloader:
         :return: Путь, куда были сохранены архивы.
         :raises: Записывает ошибки в лог при проблемах с скачиванием.
         """
-        # Получаем список типов документов из конфигурации
-        document_types = [doc_type.strip() for doc_type in self.config.get("eis", "documentType44_PRIZ").split(",")]
 
-        # Определяем путь для сохранения в зависимости от типа документа
-        if document_type in document_types:
-            logger.info(f"Проверяемый тип документа: '{document_type}'")
-            save_path = "F:\\Программирование\\Парсинг ЕИС\\44_FZ\\xml_reestr_44_fz_new_contracts"
-        elif document_type in self.config.get("eis", "documentType44_RGK").split(","):
-            save_path = "F:\\Программирование\\Парсинг ЕИС\\44_FZ\\xml_reestr_44_new_contracts_recouped"
-        elif document_type in self.config.get("eis", "documentType223_RI223").split(","):
-            save_path = "F:\\Программирование\\Парсинг ЕИС\\223_FZ\\xml_reestr_223_fz_new_contracts"
-        elif document_type in self.config.get("eis", "documentType223_RD223").split(","):
-            save_path = "F:\\Программирование\\Парсинг ЕИС\\223_FZ\\xml_reestr_new_223_contracts_recouped"
+        # Сопоставляем тип документа с путями из конфигурации
+        path_mapping = {
+            "documentType44_PRIZ": "recouped_contract_archive_44_fz_xml",
+            "documentType44_RGK": "recouped_contract_archive_44_fz_xml",
+            "documentType223_RI223": "recouped_contract_archive_223_fz_xml",
+            "documentType223_RD223": "recouped_contract_archive_223_fz_xml",
+        }
+
+        # Определяем, какой ключ использовать
+        for doc_key, path_key in path_mapping.items():
+            if document_type in self.config.get("eis", doc_key).split(","):
+                save_path = self.config.get("path", path_key, fallback=None)
+                if not save_path:
+                    logger.error(f"Путь не найден в конфигурации для {path_key}")
+                    return None
+                break
         else:
             logger.error(f"Не найден путь для типа документа: {document_type}")
             return None
+
+        logger.info(f"Файлы будут сохранены в: {save_path}")
 
         # Перебираем все URL в списке
         for url in urls:
