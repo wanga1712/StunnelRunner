@@ -54,7 +54,7 @@ class DatabaseManager:
             # Логируем и выбрасываем исключение в случае ошибки подключения
             logger.exception(f'Ошибка подключения к базе данных: {e}')
 
-    def execute_query(self, query, params):
+    def execute_query(self, query, params=None, fetch=False):
         """
         Выполняет SQL-запрос.
         :param query: SQL-запрос
@@ -62,4 +62,23 @@ class DatabaseManager:
         :return: результат выполнения запроса
         """
         self.cursor.execute(query, params)
-        return self.cursor.fetchall()
+        self.connection.commit()
+        if fetch:  # Только если нужен результат
+            return self.cursor.fetchall()
+
+    def fetch_one(self, query, params=None):
+        """Выполняет запрос и возвращает одну строку"""
+        self.cursor.execute(query, params)
+        return self.cursor.fetchone()
+
+    def close(self):
+        """Закрывает соединение и курсор с базой данных."""
+        try:
+            if self.cursor:
+                self.cursor.close()
+                logger.debug("Курсор закрыт.")
+            if self.connection:
+                self.connection.close()
+                logger.debug("Соединение с базой данных закрыто.")
+        except Exception as e:
+            logger.exception(f"Ошибка при закрытии соединения или курсора: {e}")
