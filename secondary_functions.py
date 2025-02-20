@@ -2,6 +2,7 @@ import json
 import configparser
 import os
 from dotenv import load_dotenv
+import inspect
 from loguru import logger
 
 
@@ -14,12 +15,20 @@ def load_config(config_path="config.ini"):
     :raises: Ошибка, если не удалось загрузить конфигурацию.
     """
     config = configparser.ConfigParser()
+
+    # Получаем путь к файлу конфигурации относительно местоположения самого модуля secondary_functions
+    current_function_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+
+    # Формируем абсолютный путь к конфигурации относительно модуля secondary_functions
+    config_path = os.path.join(current_function_path, config_path)
+
     try:
         # Читаем конфигурационный файл с указанным путём
+        logger.info(f"Используем конфигурацию из: {config_path}")
         config.read(config_path, encoding="utf-8")
         return config
     except configparser.Error as e:
-        logger.error(f"Ошибка загрузки config.ini: {e}")
+        logger.error(f"Ошибка загрузки {config_path}: {e}")
         raise
 
 
@@ -111,7 +120,7 @@ if __name__ == "__main__":
     config = load_config()
 
     # Загружаем путь к файлу регионов
-    regions_file = config.get("path", "regions_file", fallback=None)
+    regions_file = config.get("path", "reest_new_contract_archive_44_fz_xml", fallback=None)
     if not regions_file:
         logger.error("Путь к файлу регионов не указан в config.ini")
     else:
