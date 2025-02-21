@@ -32,7 +32,7 @@ class FileDownloader:
         # Логируем успешную загрузку конфигурации и токена
         logger.info("Конфигурация и токен загружены успешно.")
 
-    def download_files(self, urls, document_type):
+    def download_files(self, urls, subsystem):
         """
         Скачивает файлы по переданному списку URL и сохраняет их в нужную папку в зависимости от типа документа.
 
@@ -42,24 +42,24 @@ class FileDownloader:
         :raises: Записывает ошибки в лог при проблемах с скачиванием.
         """
 
-        # Сопоставляем тип документа с путями из конфигурации
+        # Сопоставляем subsystem с путями из конфигурации
         path_mapping = {
-            "documentType44_PRIZ": "recouped_contract_archive_44_fz_xml",
-            "documentType44_RGK": "recouped_contract_archive_44_fz_xml",
-            "documentType223_RI223": "recouped_contract_archive_223_fz_xml",
-            "documentType223_RD223": "recouped_contract_archive_223_fz_xml",
+            "PRIZ": "reest_new_contract_archive_44_fz_xml",
+            "RGK": "recouped_contract_archive_44_fz_xml",
+            "RI223": "reest_new_contract_archive_223_fz_xml",
+            "RD223": "recouped_contract_archive_223_fz_xml",
         }
 
-        # Определяем, какой ключ использовать
-        for doc_key, path_key in path_mapping.items():
-            if document_type in self.config.get("eis", doc_key).split(","):
-                save_path = self.config.get("path", path_key, fallback=None)
-                if not save_path:
-                    logger.error(f"Путь не найден в конфигурации для {path_key}")
-                    return None
-                break
-        else:
-            logger.error(f"Не найден путь для типа документа: {document_type}")
+        # Проверяем, есть ли subsystem в словаре
+        path_key = path_mapping.get(subsystem)
+        if not path_key:
+            logger.error(f"Не найден путь для типа документа: {subsystem}")
+            return None
+
+        # Получаем путь из config.ini
+        save_path = self.config.get("path", path_key, fallback=None)
+        if not save_path:
+            logger.error(f"Путь не найден в конфигурации для {path_key}")
             return None
 
         logger.info(f"Файлы будут сохранены в: {save_path}")

@@ -119,7 +119,7 @@ class EISRequester:
         # Возвращаем сформированный SOAP-запрос
         return soap_request
 
-    def send_soap_request(self, soap_request: str, region_code: int, document_type: str) -> str:
+    def send_soap_request(self, soap_request: str, region_code: int, document_type: str, subsystem: str) -> str:
         """
         Отправляет SOAP-запрос к серверу и обрабатывает полученный ответ.
 
@@ -146,7 +146,8 @@ class EISRequester:
             if archive_urls:
                 # Логируем, если найдены ссылки на архивы, и начинаем их загрузку
                 logger.info(f"Найдено {len(archive_urls)} ссылок на архивы. Начинаем загрузку...")
-                self.file_downloader.download_files(archive_urls, document_type)  # Загружаем файлы
+                self.file_downloader.download_files(archive_urls, subsystem)  # Загружаем файлы
+                logger.debug(f"Download if {subsystem}")
             else:
                 # Логируем, если ссылки на архивы не найдены
                 logger.warning(f"Ссылки на архивы не найдены. Ответ сервера: {response.text}")
@@ -178,7 +179,7 @@ class EISRequester:
                                 logger.info(
                                     f"Запрос для PRIZ ({document_type}) успешно сформирован.")  # Логируем успешное формирование запроса
                                 # Передаем запрос в send_soap_request с необходимыми параметрами
-                                self.send_soap_request(soap_request, region_code, document_type)
+                                self.send_soap_request(soap_request, region_code, document_type, subsystem)
                             else:
                                 logger.error(
                                     f"Не удалось сформировать запрос для PRIZ ({document_type}).")  # Логируем ошибку при формировании запроса
@@ -191,7 +192,7 @@ class EISRequester:
                                 logger.info(
                                     f"Запрос для RGK ({document_type}) успешно сформирован.")  # Логируем успешное формирование запроса
                                 # Передаем запрос в send_soap_request с необходимыми параметрами
-                                self.send_soap_request(soap_request, region_code, document_type)
+                                self.send_soap_request(soap_request, region_code, document_type, subsystem)
                             else:
                                 logger.error(
                                     f"Не удалось сформировать запрос для RGK ({document_type}).")  # Логируем ошибку при формировании запроса
@@ -206,7 +207,7 @@ class EISRequester:
                                     logger.info(
                                         f"Запрос для RI223 ({document_type}) успешно сформирован.")  # Логируем успешное формирование запроса
                                     # Передаем запрос в send_soap_request с необходимыми параметрами
-                                    self.send_soap_request(soap_request, region_code, document_type)
+                                    self.send_soap_request(soap_request, region_code, document_type, subsystem)
                                 else:
                                     logger.error(
                                         f"Не удалось сформировать запрос для RI223 ({document_type}).")  # Логируем ошибку при формировании запроса
@@ -219,7 +220,7 @@ class EISRequester:
                                     logger.info(
                                         f"Запрос для RD223 ({document_type}) успешно сформирован.")  # Логируем успешное формирование запроса
                                     # Передаем запрос в send_soap_request с необходимыми параметрами
-                                    self.send_soap_request(soap_request, region_code, document_type)
+                                    self.send_soap_request(soap_request, region_code, document_type, subsystem)
                                 else:
                                     logger.error(
                                         f"Не удалось сформировать запрос для RD223 ({document_type}).")  # Логируем ошибку при формировании запроса
