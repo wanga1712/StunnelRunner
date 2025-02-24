@@ -1,0 +1,42 @@
+{
+  "reestr_contract_44_fz": {
+    "contract_number": "purchaseNoticeData/registrationNumber",
+    "tender_link": "purchaseNoticeData/urlEIS",
+    "auction_name": "purchaseNoticeData/name",
+    "start_date": "documentationDelivery/deliveryStartDateTime",
+    "end_date": "documentationDelivery/deliveryEndDateTime",
+    "initial_price": "initialSum",
+    "customer_full_name": "mainInfo/fullName"
+  },
+  "trading_platform": {
+    "trading_platform_name": "electronicPlaceInfo/name",
+    "trading_platform_url": "purchaseNoticeData/urlVSRZ"
+  },
+  "customer": {
+    "customer_short_name": "mainInfo/shortName",
+    "customer_full_name": "mainInfo/fullName",
+    "customer_inn": "mainInfo/inn",
+    "customer_kpp": "mainInfo/kpp",
+    "customer_legal_address": "mainInfo/legalAddress",
+    "customer_actual_address": "mainInfo/postalAddress",
+    "contact_last_name": "contact/lastName",
+            "contact_first_name": "contact/firstName",
+            "contact_middle_name": "contact/middleName",
+            "contact_email": "contact/email",
+            "contact_phone": "contact/phone",
+    "delivery_region": "deliveryPlace/state",
+    "delivery_address": "deliveryPlace/address"
+  },
+  "links_documentation_44_fz": {
+    "printFormInfo": {
+      "xpath": ".//printFormInfo/url",
+      "default_file_name": "Извещение о проведении электронного аукциона",
+      "first_only": true
+    },
+    "attachmentInfo": {
+      "xpath": ".//document",
+      "fileName_tag": "fileName",
+      "url_tag": "url"
+    }
+  }
+}
