@@ -1,5 +1,5 @@
 {
-  "reestr_contract_44_fz": {
+  "reestr_contract": {
     "contract_number": "purchaseNoticeData/registrationNumber",
     "tender_link": "purchaseNoticeData/urlEIS",
     "auction_name": "purchaseNoticeData/name",
@@ -27,7 +27,7 @@
     "delivery_region": "deliveryPlace/state",
     "delivery_address": "deliveryPlace/address"
   },
-  "links_documentation_44_fz": {
+  "links_documentation": {
     "printFormInfo": {
       "xpath": ".//printFormInfo/url",
       "default_file_name": "Извещение о проведении электронного аукциона",

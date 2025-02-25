@@ -1,5 +1,5 @@
 {
-  "reestr_contract_44_fz": {
+  "reestr_contract": {
     "contract_number": "purchaseNumber",
     "tender_link": "href",
     "auction_name": "purchaseObjectInfo",
@@ -28,7 +28,7 @@
     "delivery_region": "GARInfo/GARAddress",
     "delivery_address": "GARInfo/deliveryPlace"
   },
-  "links_documentation_44_fz": {
+  "links_documentation": {
     "printFormInfo": {
       "xpath": ".//printFormInfo/url",
       "default_file_name": "Извещение о проведении электронного аукциона",

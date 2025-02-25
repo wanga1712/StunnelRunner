@@ -50,7 +50,7 @@ class XMLParser:
             logger.error(f"Ошибка при загрузке JSON файла с тегами {tags_path}: {e}")
             return None
 
-    def parse_reestr_contract_44_fz(self, root, tags):
+    def parse_reestr_contract(self, root, tags):
         """
         Парсит данные для таблицы reestr_contract_44_fz.
         """
@@ -107,7 +107,7 @@ class XMLParser:
 
         return found_tags
 
-    def parse_links_documentation_44_fz(self, root, tags):
+    def parse_links_documentation(self, root, tags):
         """
         Парсит данные для таблицы links_documentation_44_fz.
         """
@@ -253,15 +253,15 @@ class XMLParser:
 
                 # Парсим каждую таблицу отдельно
                 found_tags = {}
-                found_tags.update(self.parse_reestr_contract_44_fz(root, tags.get('reestr_contract_44_fz', {})))
+                found_tags.update(self.parse_reestr_contract(root, tags.get('reestr_contract', {})))
                 found_tags.update(self.parse_trading_platform(root, tags.get('trading_platform', {})))
                 found_tags.update(self.parse_customer(root, tags.get('customer', {})))
-                found_tags.update(self.parse_links_documentation_44_fz(root, tags.get('links_documentation_44_fz', {})))
-                found_tags.update(self.parse_print_form_info(root, tags.get('links_documentation_44_fz', {})))
+                found_tags.update(self.parse_links_documentation(root, tags.get('links_documentation', {})))
+                found_tags.update(self.parse_print_form_info(root, tags.get('links_documentation', {})))
 
         return "Парсинг завершён."
 
 # Пример использования
 xml_parser = XMLParser()
-xml_folder_path = r"F:\Программирование\Парсинг ЕИС\223_FZ\xml_reestr_223_fz_new_contracts"  # Укажи нужную папку
+xml_folder_path = r"F:\Программирование\Парсинг ЕИС\44_FZ\xml_reestr_44_fz_new_contracts"  # Укажи нужную папку
 parsed_data = xml_parser.parse_xml_tags(xml_folder_path)
