@@ -6,6 +6,7 @@ from loguru import logger
 from secondary_functions import load_config, load_token
 
 from archive_extractor import ArchiveExtractor
+from parsing_xml.okpd_parser import process_okpd_files  # Импортируем функцию для проверки ОКПД
 
 
 class FileDownloader:
@@ -90,6 +91,12 @@ class FileDownloader:
 
                 # После скачивания сразу разархивируем файл
                 self.archive_extractor.unzip_files(save_path)
+                # Путь к разархивированным файлам
+                extracted_folder_path = save_path  # Папка с разархивированными файлами
+
+                # Проверяем файлы на ОКПД и удаляем, если они не в базе
+                okpd_results = process_okpd_files(extracted_folder_path)
+                logger.info(f"Обработка файлов в папке {extracted_folder_path} завершена.")
 
             except requests.exceptions.RequestException as e:
                 logger.error(f"Ошибка при скачивании {url}: {e}")
