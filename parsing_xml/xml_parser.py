@@ -23,7 +23,8 @@ class XMLParser:
         self.xml_paths = self.config['path']
         self.tags_paths = self.config['tags']
 
-    def remove_namespaces(self, xml_string):
+    @staticmethod
+    def remove_namespaces(xml_string):
         """
         Полностью удаляет все пространства имен из XML-строки.
         Убирает как префиксы, так и их определения.
@@ -261,7 +262,7 @@ class XMLParser:
 
         return "Парсинг завершён."
 
-# Пример использования
-xml_parser = XMLParser()
-xml_folder_path = r"F:\Программирование\Парсинг ЕИС\44_FZ\xml_reestr_44_fz_new_contracts"  # Укажи нужную папку
-parsed_data = xml_parser.parse_xml_tags(xml_folder_path)
+# # # Пример использования
+# xml_parser = XMLParser()
+# xml_folder_path = r"F:\Программирование\Парсинг ЕИС\223_FZ\xml_reestr_223_fz_new_contracts"  # Укажи нужную папку
+# parsed_data = xml_parser.parse_xml_tags(xml_folder_path)
