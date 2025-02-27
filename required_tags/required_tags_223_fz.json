@@ -6,7 +6,9 @@
     "start_date": "documentationDelivery/deliveryStartDateTime",
     "end_date": "documentationDelivery/deliveryEndDateTime",
     "initial_price": "initialSum",
-    "customer_full_name": "mainInfo/fullName"
+    "customer_full_name": "mainInfo/fullName",
+    "delivery_region": "deliveryPlace/state",
+    "delivery_address": "deliveryPlace/address"
   },
   "trading_platform": {
     "trading_platform_name": "electronicPlaceInfo/name",
@@ -23,9 +25,7 @@
             "contact_first_name": "contact/firstName",
             "contact_middle_name": "contact/middleName",
             "contact_email": "contact/email",
-            "contact_phone": "contact/phone",
-    "delivery_region": "deliveryPlace/state",
-    "delivery_address": "deliveryPlace/address"
+            "contact_phone": "contact/phone"
   },
   "links_documentation": {
     "printFormInfo": {

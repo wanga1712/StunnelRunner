@@ -7,7 +7,9 @@
     "end_date": "collectingInfo/endDT",
     "initial_price": "maxPriceInfo/maxPrice",
     "customer": "customer/fullName",
-    "gurantee_amount": "applicationGuarantee/amount"
+    "gurantee_amount": "applicationGuarantee/amount",
+    "delivery_region": "GARInfo/GARAddress",
+    "delivery_address": "GARInfo/deliveryPlace"
   },
   "trading_platform": {
     "trading_platform_name": "ETP/name",
@@ -24,9 +26,7 @@
     "contact_first_name": "contactPersonInfo/firstName",
     "contact_middle_name": "contactPersonInfo/middleName",
     "contact_email": "contactEMail",
-    "contact_phone": "responsibleInfo/contactPhone",
-    "delivery_region": "GARInfo/GARAddress",
-    "delivery_address": "GARInfo/deliveryPlace"
+    "contact_phone": "responsibleInfo/contactPhone"
   },
   "links_documentation": {
     "printFormInfo": {
