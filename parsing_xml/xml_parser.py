@@ -128,30 +128,34 @@ class XMLParser:
             element = root.find(f".//{xpath}")  # Добавляем ".//" для поиска на любом уровне
             found_tags[tag] = element.text.strip() if element is not None and element.text else None
 
-        # Если нет имени площадки — не можем работать дальше
+        # Получаем имя торговой площадки
         trading_platform_name = found_tags.get('trading_platform_name')
-        if not trading_platform_name:
-            logger.error("Не удалось найти имя торговой площадки.")
-            return None
 
-        # Получаем ID площадки по имени
+        # Если имя торговой площадки не найдено, ставим дефолтное значение
+        if not trading_platform_name:
+            trading_platform_name = "Торговая площадка не найдена"  # Присваиваем дефолтное значение
+
+        # Проверяем, есть ли в базе запись с этим именем
         platform_id = self.db_id_fetcher.get_trading_platform_id(trading_platform_name)
 
+        # Если площадка уже существует, возвращаем её ID
         if platform_id:
             logger.info(f"Торговая площадка '{trading_platform_name}' уже существует, ID: {platform_id}")
-            return platform_id  # Если нашли, просто возвращаем ID
+            return platform_id
 
-        # Если площадки нет в БД, проверяем наличие URL перед вставкой
-        if found_tags.get('trading_platform_url'):
-            platform_id = self.database_operations.insert_trading_platform(found_tags)
-            if platform_id:
-                logger.info(f"Добавлена новая торговая площадка с ID: {platform_id}")
-            else:
-                logger.error(f"Не удалось добавить торговую площадку '{trading_platform_name}' в БД.")
+        # Если площадки нет в БД, создаем новую запись
+        found_tags['trading_platform_name'] = trading_platform_name
+        found_tags['trading_platform_url'] = found_tags.get('trading_platform_url',
+                                                            "https://нет.ссылки")  # Устанавливаем дефолтный URL
+
+        platform_id = self.database_operations.insert_trading_platform(found_tags)
+
+        if platform_id:
+            logger.info(f"Добавлена торговая площадка '{trading_platform_name}' с ID: {platform_id}")
         else:
-            logger.warning(f"Не удалось найти URL для торговой площадки '{trading_platform_name}', запись не создана.")
+            logger.error(f"Не удалось добавить торговую площадку '{trading_platform_name}' в БД.")
 
-        return platform_id  # Возвращаем либо найденный, либо вновь созданный ID
+        return platform_id  # Возвращаем ID, который был найден или создан
 
     def parse_customer(self, root, tags, tags_file):
         """
