@@ -3,6 +3,7 @@ import json
 import xml.etree.ElementTree as ET
 from loguru import logger
 import re
+from datetime import datetime
 
 from secondary_functions import load_config
 from database_work.check_database import DatabaseCheckManager
@@ -81,11 +82,20 @@ class XMLParser:
             if elements:
                 values = [elem.text.strip() for elem in elements if elem.text and elem.text.strip()]
                 found_tags[tag] = values[0] if values else None
-
-                # if values:
-                # logger.info(f"Тег: {tag} содержит значение: {found_tags[tag]}")
             else:
                 found_tags[tag] = None
+
+            # Если поле start_date пустое или не найдено, ТУТ НАДО ПЕРЕДАВАТЬ ДАННЫЕ ПО ДАТЕ КОГДА ПАРСИМ ДАННЫЕ
+            if tag == "start_date" and (found_tags[tag] is None or found_tags[tag] == ""):
+                found_tags[tag] = datetime.now().strftime('%Y-%m-%d')  # Форматируем текущую дату
+
+            # Если поле end_date пустое или не найдено, ставим текущую дату
+            if tag == "end_date" and (found_tags[tag] is None or found_tags[tag] == ""):
+                found_tags[tag] = datetime.now().strftime('%Y-%m-%d')  # Форматируем текущую дату
+
+            # Если поле initial_price пустое или не найдено, ставим 0
+            if tag == "initial_price" and (found_tags[tag] is None or found_tags[tag] == ""):
+                found_tags[tag] = 0
 
         # Добавляем дополнительные параметры
         found_tags['region_id'] = self.db_id_fetcher.get_region_id(region_code)
