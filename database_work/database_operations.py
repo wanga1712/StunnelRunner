@@ -24,13 +24,17 @@ class DatabaseOperations:
             ]
         elif tags_file == self.tags_paths['get_tags_223_new']:
             contact_parts = [
-                customer_data.get("contact_last_name", ""),
-                customer_data.get("contact_first_name", ""),
-                customer_data.get("contact_middle_name", "")
+                customer_data.get("contact_last_name") or None,
+                customer_data.get("contact_first_name") or None,
+                customer_data.get("contact_middle_name") or None
             ]
         else:
             contact_parts = []
-        return " ".join([part for part in contact_parts if part]).strip() or None
+
+        # Убираем пустые строки, заменяем на None
+        contact = " ".join([part for part in contact_parts if part]).strip() or None
+
+        return contact
 
     def _update_field(self, existing_value, new_value):
         """Если новое значение отличается от существующего, добавляем его через ;"""
@@ -42,10 +46,10 @@ class DatabaseOperations:
 
     def _is_contact_exists(self, contact):
         """Проверяем, существует ли уже контакт в базе данных."""
+        if contact is None:
+            return False  # Если контакт равен None, значит, его не существует в базе
         cursor = self.db_manager.cursor
-        cursor.execute("""
-            SELECT COUNT(1) FROM customer WHERE contact = %s
-        """, (contact,))
+        cursor.execute("""SELECT COUNT(1) FROM customer WHERE contact = %s""", (contact,))
         count = cursor.fetchone()[0]
         return count > 0
 
@@ -62,7 +66,7 @@ class DatabaseOperations:
                     elif column in ['start_date', 'end_date']:
                         data[column] = None
                     else:
-                        data[column] = ''  # Вставляем пустую строку, если это не числовые поля
+                        data[column] = None  # Заменяем пустую строку на None
 
             # Проверка на уникальность контакта
             contact = data.get('contact')
