@@ -1,23 +1,38 @@
 from loguru import logger
+
 from database_work.database_connection import DatabaseManager
 
 class DatabaseIDFetcher:
-    def __init__(self):
-        self.db_manager = DatabaseManager()
+    """
+    Класс для извлечения id записей из различных таблиц базы данных по заданным значениям.
 
-    def get_connection(self):
-        return self.db_manager.get_connection()
+    Атрибуты:
+        db_manager (DatabaseManager): Объект для работы с подключением к базе данных.
+    """
+
+    def __init__(self):
+        """
+        Инициализация объекта DatabaseIDFetcher.
+
+        Создает экземпляр DatabaseManager для выполнения запросов к базе данных.
+        """
+
+        logger.add("errors.log", level="ERROR", rotation="10 MB", compression="zip")
+
+        self.db_manager = DatabaseManager()
 
     def fetch_id(self, table_name, column_name, value):
         """
         Универсальный метод для получения id записи по заданному значению в указанной таблице.
-        :param table_name: Название таблицы
-        :param column_name: Название колонки, по которой ищем
-        :param value: Значение для поиска
-        :return: id записи или None, если не найдено
+
+        :param table_name: Название таблицы.
+        :param column_name: Название колонки, по которой ищем.
+        :param value: Значение для поиска.
+        :return: id записи или None, если не найдено.
         """
         try:
-            connection = self.get_connection()
+            # Используем self.db_manager.connection напрямую
+            connection = self.db_manager.connection
             cursor = connection.cursor()
             query = f"SELECT id FROM {table_name} WHERE {column_name} = %s"
             cursor.execute(query, (value,))
@@ -32,53 +47,163 @@ class DatabaseIDFetcher:
             logger.error(f"Ошибка при получении id из {table_name}: {e}")
             return None
 
+
     def get_collection_codes_okpd_id(self, code):
+        """
+        Получает id записи из таблицы collection_codes_okpd по коду.
+
+        :param code: Код для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("collection_codes_okpd", "code", code)
 
     def get_contractor_id(self, inn):
+        """
+        Получает id записи из таблицы contractor по ИНН.
+
+        :param inn: ИНН для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("contractor", "inn", inn)
 
-    def get_customer_id(self, name):
-        return self.fetch_id("customer", "name", name)
+    def get_customer_id(self, inn):
+        """
+        Получает id записи из таблицы customer по имени (ИНН).
+
+        :param inn: ИНН для поиска.
+        :return: id записи или None, если не найдено.
+        """
+        return self.fetch_id("customer", "customer_inn", inn)
 
     def get_dates_id(self, date_value):
+        """
+        Получает id записи из таблицы dates по значению даты.
+
+        :param date_value: Дата для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("dates", "date", date_value)
 
     def get_file_names_xml_id(self, file_name):
+        """
+        Получает id записи из таблицы file_names_xml по имени файла.
+
+        :param file_name: Имя файла для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("file_names_xml", "file_name", file_name)
 
     def get_key_words_names_id(self, keyword):
+        """
+        Получает id записи из таблицы key_words_names по ключевому слову.
+
+        :param keyword: Ключевое слово для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("key_words_names", "keyword", keyword)
 
     def get_key_words_names_documentations_id(self, keyword):
+        """
+        Получает id записи из таблицы key_words_names_documentations по ключевому слову.
+
+        :param keyword: Ключевое слово для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("key_words_names_documentations", "keyword", keyword)
 
     def get_links_documentation_223_fz_id(self, link):
+        """
+        Получает id записи из таблицы links_documentation_223_fz по ссылке.
+
+        :param link: Ссылка для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("links_documentation_223_fz", "link", link)
 
     def get_links_documentation_44_fz_id(self, link):
+        """
+        Получает id записи из таблицы links_documentation_44_fz по ссылке.
+
+        :param link: Ссылка для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("links_documentation_44_fz", "link", link)
 
     def get_okpd_from_users_id(self, code):
+        """
+        Получает id записи из таблицы okpd_from_users по коду.
+
+        :param code: Код для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("okpd_from_users", "code", code)
 
     def get_reestr_contract_223_fz_id(self, contract_number):
+        """
+        Получает id записи из таблицы reestr_contract_223_fz по номеру контракта.
+
+        :param contract_number: Номер контракта для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("reestr_contract_223_fz", "contract_number", contract_number)
 
     def get_reestr_contract_44_fz_id(self, contract_number):
+        """
+        Получает id записи из таблицы reestr_contract_44_fz по номеру контракта.
+
+        :param contract_number: Номер контракта для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("reestr_contract_44_fz", "contract_number", contract_number)
 
-    def get_region_id(self, name):
-        return self.fetch_id("region", "name", name)
+    def get_region_id(self, region_code):
+        """
+        Получает id записи из таблицы region по коду региона.
+
+        :param region_code: Код региона для поиска.
+        :return: id записи или None, если не найдено.
+        """
+        return self.fetch_id("region", "code", region_code)
 
     def get_stop_words_names_id(self, word):
+        """
+        Получает id записи из таблицы stop_words_names по слову.
+
+        :param word: Слово для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("stop_words_names", "word", word)
 
     def get_trading_platform_id(self, name):
-        return self.fetch_id("trading_platform", "name", name)
+        """
+        Получает id записи из таблицы trading_platform по имени.
+
+        :param name: Имя торговой платформы для поиска.
+        :return: id записи или None, если не найдено.
+        """
+        return self.fetch_id("trading_platform", "trading_platform_name", name)
 
     def get_users_id(self, username):
+        """
+        Получает id записи из таблицы users по имени пользователя.
+
+        :param username: Имя пользователя для поиска.
+        :return: id записи или None, если не найдено.
+        """
         return self.fetch_id("users", "username", username)
 
+    def get_okpd_id(self, okpd_code):
+        """
+                Получает id записи из таблицы users по имени пользователя.
+
+                :param username: Имя пользователя для поиска.
+                :return: id записи или None, если не найдено.
+                """
+        return self.fetch_id("collection_codes_okpd", "sub_code", okpd_code)
+
+
     def close(self):
+        """
+        Закрывает соединение с базой данных.
+        """
         self.db_manager.close()

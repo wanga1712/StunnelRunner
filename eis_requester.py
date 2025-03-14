@@ -146,7 +146,7 @@ class EISRequester:
             if archive_urls:
                 # Логируем, если найдены ссылки на архивы, и начинаем их загрузку
                 logger.info(f"Найдено {len(archive_urls)} ссылок на архивы. Начинаем загрузку...")
-                self.file_downloader.download_files(archive_urls, subsystem)  # Загружаем файлы
+                self.file_downloader.download_files(archive_urls, subsystem, region_code)  # Загружаем файлы
                 logger.debug(f"Download if {subsystem}")
             else:
                 # Логируем, если ссылки на архивы не найдены

@@ -6,7 +6,8 @@
     "start_date": "documentationDelivery/deliveryStartDateTime",
     "end_date": "documentationDelivery/deliveryEndDateTime",
     "initial_price": "initialSum",
-    "customer_full_name": "mainInfo/fullName",
+    "placer": "placer/mainInfo/fullName",
+    "placer_inn": "placer/mainInfo/inn",
     "delivery_region": "deliveryPlace/state",
     "delivery_address": "deliveryPlace/address"
   },
@@ -15,17 +16,17 @@
     "trading_platform_url": "purchaseNoticeData/urlVSRZ"
   },
   "customer": {
-    "customer_short_name": "mainInfo/shortName",
-    "customer_full_name": "mainInfo/fullName",
-    "customer_inn": "mainInfo/inn",
-    "customer_kpp": "mainInfo/kpp",
-    "customer_legal_address": "mainInfo/legalAddress",
-    "customer_actual_address": "mainInfo/postalAddress",
-    "contact_last_name": "contact/lastName",
-            "contact_first_name": "contact/firstName",
-            "contact_middle_name": "contact/middleName",
-            "contact_email": "contact/email",
-            "contact_phone": "contact/phone"
+    "customer_short_name": "customer/mainInfo/shortName",
+    "customer_full_name": "customer/mainInfo/fullName",
+    "customer_inn": "customer/mainInfo/inn",
+    "customer_kpp": "customer/mainInfo/kpp",
+    "customer_legal_address": "customer/mainInfo/legalAddress",
+    "customer_actual_address": "customer/mainInfo/postalAddress",
+    "contact_last_name": "customer/contact/lastName",
+    "contact_first_name": "customer/contact/firstName",
+    "contact_middle_name": "customer/contact/middleName",
+    "contact_email": "customer/contact/email",
+    "contact_phone": "customer/contact/phone"
   },
   "links_documentation": {
     "printFormInfo": {
@@ -35,8 +36,8 @@
     },
     "attachmentInfo": {
       "xpath": ".//document",
-      "fileName_tag": "fileName",
-      "url_tag": "url"
+      "file_name": "fileName",
+      "document_links": "url"
     }
   }
 }

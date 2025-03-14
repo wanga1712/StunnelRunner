@@ -27,6 +27,8 @@ class DatabaseManager:
         Исключения:
             Exception: В случае ошибки подключения к базе данных.
         """
+        logger.add("errors.log", level="ERROR", rotation="10 MB", compression="zip")
+
         # Загружаем переменные окружения из файла .env
         load_dotenv(dotenv_path=r'C:\Users\wangr\PycharmProjects\TenderMonitor\database_work\db_credintials.env')
 
@@ -57,9 +59,12 @@ class DatabaseManager:
     def execute_query(self, query, params=None, fetch=False):
         """
         Выполняет SQL-запрос.
-        :param query: SQL-запрос
-        :param params: параметры запроса
-        :return: результат выполнения запроса
+
+        :param query: SQL-запрос для выполнения.
+        :param params: Параметры для запроса.
+        :param fetch: Если True, возвращает результат выполнения запроса.
+
+        :return: Результат запроса, если `fetch=True`, иначе None.
         """
         self.cursor.execute(query, params)
         self.connection.commit()
@@ -67,12 +72,23 @@ class DatabaseManager:
             return self.cursor.fetchall()
 
     def fetch_one(self, query, params=None):
-        """Выполняет запрос и возвращает одну строку"""
+        """
+        Выполняет SQL-запрос и возвращает одну строку результата.
+
+        :param query: SQL-запрос для выполнения.
+        :param params: Параметры для запроса.
+        :return: Одна строка результата запроса или None.
+        """
         self.cursor.execute(query, params)
-        return self.cursor.fetchone()
+        result = self.cursor.fetchone()
+        return result[0] if result else False  # Вернёт False, если данных нет
 
     def close(self):
-        """Закрывает соединение и курсор с базой данных."""
+        """
+        Закрывает соединение и курсор с базой данных.
+
+        :return: None
+        """
         try:
             if self.cursor:
                 self.cursor.close()

@@ -7,7 +7,7 @@
     "end_date": "collectingInfo/endDT",
     "initial_price": "maxPriceInfo/maxPrice",
     "customer": "customer/fullName",
-    "gurantee_amount": "applicationGuarantee/amount",
+    "guarantee_amount": "applicationGuarantee/amount",
     "delivery_region": "GARInfo/GARAddress",
     "delivery_address": "GARInfo/deliveryPlace"
   },
@@ -30,14 +30,15 @@
   },
   "links_documentation": {
     "printFormInfo": {
-      "xpath": ".//printFormInfo/url",
+      "xpath": ".//printFormInfo",
+      "document_links": "url",
       "default_file_name": "Извещение о проведении электронного аукциона",
       "first_only": true
     },
     "attachmentInfo": {
       "xpath": ".//attachmentInfo",
-      "fileName_tag": "fileName",
-      "url_tag": "url"
+      "file_name": "fileName",
+      "document_links": "url"
     }
   }
 }
