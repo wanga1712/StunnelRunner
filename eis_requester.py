@@ -2,6 +2,8 @@ from loguru import logger
 from datetime import datetime, timezone
 import uuid
 import requests
+import time
+
 
 from secondary_functions import load_token, load_config
 from database_work.database_requests import get_region_codes
@@ -121,12 +123,9 @@ class EISRequester:
 
     def send_soap_request(self, soap_request: str, region_code: int, document_type: str, subsystem: str) -> str:
         """
-        Отправляет SOAP-запрос к серверу и обрабатывает полученный ответ.
+        Отправляет SOAP-запрос к серверу и обрабатывает полученный ответ с повторными попытками подключения.
 
-        :param soap_request: Сформированный SOAP-запрос в виде строки.
-        :param region_code: Код региона, связанный с запросом (не используется напрямую в этом методе).
-        :param document_type: Тип документа, который был запрашиваемым.
-        :return: Ответ сервера в виде строки, если запрос успешен; None, если произошла ошибка.
+        В случае разрыва соединения (например, ConnectionResetError), попытки повторяются с увеличением интервала.
         """
         # Заголовки для отправки запроса
         headers = {
@@ -134,29 +133,47 @@ class EISRequester:
             "Authorization": f"Bearer {self.token}"  # Токен авторизации в заголовках
         }
 
-        logger.info("Отправка SOAP-запроса...")  # Логируем начало отправки запроса
-        try:
-            # Отправка POST-запроса с SOAP-данными
-            response = requests.post(self.url, data=soap_request.encode("utf-8"), headers=headers, verify=False)
-            response.raise_for_status()  # Проверяем, что запрос завершился успешно
-            logger.info(f"Ответ от сервера получен.")  # Логируем успешный ответ
+        max_retries = 6  # Максимальное количество попыток
+        backoff_times = [5, 10, 15, 20, 25, 30]  # Время ожидания для каждой повторной попытки в минутах
+        retry_count = 0
 
-            # Парсим XML-ответ и извлекаем ссылки на архивы
-            archive_urls = self.xml_parser.extract_archive_urls(response.text)
-            if archive_urls:
-                # Логируем, если найдены ссылки на архивы, и начинаем их загрузку
-                logger.info(f"Найдено {len(archive_urls)} ссылок на архивы. Начинаем загрузку...")
-                self.file_downloader.download_files(archive_urls, subsystem, region_code)  # Загружаем файлы
-                logger.debug(f"Download if {subsystem}")
-            else:
-                # Логируем, если ссылки на архивы не найдены
-                logger.warning(f"Ссылки на архивы не найдены. Ответ сервера: {response.text}")
+        while retry_count < max_retries:
+            logger.info(f"Попытка отправки запроса ({retry_count + 1}/{max_retries})...")
+            try:
+                # Отправка POST-запроса с SOAP-данными
+                response = requests.post(self.url, data=soap_request.encode("utf-8"), headers=headers, verify=False)
+                response.raise_for_status()  # Проверяем, что запрос завершился успешно
+                logger.info(f"Ответ от сервера получен.")  # Логируем успешный ответ
 
-            return response.text  # Возвращаем текст ответа от сервера
-        except requests.exceptions.RequestException as e:
-            # Логируем ошибку при выполнении запроса
-            logger.error(f"Ошибка при выполнении SOAP-запроса: {e}")
-            return None  # Возвращаем None в случае ошибки
+                # Парсим XML-ответ и извлекаем ссылки на архивы
+                archive_urls = self.xml_parser.extract_archive_urls(response.text)
+                if archive_urls:
+                    # Логируем, если найдены ссылки на архивы, и начинаем их загрузку
+                    logger.info(f"Найдено {len(archive_urls)} ссылок на архивы. Начинаем загрузку...")
+                    self.file_downloader.download_files(archive_urls, subsystem, region_code)  # Загружаем файлы
+                    logger.debug(f"Download if {subsystem}")
+                else:
+                    # Логируем, если ссылки на архивы не найдены
+                    logger.warning(f"Ссылки на архивы не найдены. Ответ сервера: {response.text}")
+
+                return response.text  # Возвращаем текст ответа от сервера
+
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Ошибка при выполнении SOAP-запроса: {e}")
+                if "Connection aborted" in str(e) or "ConnectionResetError" in str(e):
+                    # Если это ошибка подключения, то ожидаем перед следующей попыткой
+                    if retry_count < max_retries - 1:
+                        wait_time = backoff_times[retry_count]
+                        logger.info(f"Ошибка подключения. Попробуем снова через {wait_time} минут...")
+                        time.sleep(wait_time * 60)  # Ожидание в минутах
+                        retry_count += 1
+                    else:
+                        logger.error("Не удалось подключиться после нескольких попыток.")
+                        return None  # После исчерпания всех попыток возвращаем None
+                else:
+                    # Для других ошибок, если они не связаны с подключением
+                    logger.error("Ошибка, не связанная с подключением. Прерываем попытки.")
+                    return None  # Прерываем выполнение, если ошибка не связана с соединением
 
     def process_requests(self):
         """

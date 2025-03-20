@@ -17,8 +17,6 @@ class DatabaseIDFetcher:
         Создает экземпляр DatabaseManager для выполнения запросов к базе данных.
         """
 
-        logger.add("errors.log", level="ERROR", rotation="10 MB", compression="zip")
-
         self.db_manager = DatabaseManager()
 
     def fetch_id(self, table_name, column_name, value):

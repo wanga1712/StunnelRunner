@@ -7,10 +7,9 @@ from secondary_functions import load_config
 from database_work.check_database import DatabaseCheckManager
 from database_work.database_id_fetcher import DatabaseIDFetcher
 from file_delete.file_deleter import FileDeleter
-from parsing_xml.xml_parser import XMLParser   # Импортируем функцию process_file из xml_parser.py
+from parsing_xml.xml_parser import XMLParser  # Импортируем функцию process_file из xml_parser.py
+from database_work.database_operations import DatabaseOperations
 
-
-logger.add("errors.log", level="ERROR", rotation="10 MB", compression="zip")
 
 def process_okpd_files(folder_path, region_code):
     """
@@ -52,6 +51,21 @@ def process_okpd_files(folder_path, region_code):
         logger.info(f"Обрабатываем файл: {file_name}")
 
         try:
+            # Проверка наличия файла в базе данных перед его открытием
+            file_id = db_id_fetcher.get_file_names_xml_id(file_name)
+
+            if file_id:  # Если файл уже есть в базе данных
+                logger.info(f"Файл {file_name} уже был записан в БД. Завершаем обработку.")
+                # Удаляем файл
+                file_deleter.delete_single_file(file_path)
+                continue  # Переходим к следующему файлу
+
+            # Если файла нет в базе данных, добавляем имя файла в базу
+            logger.info(f"Файл {file_name} не найден в базе данных, записываем в БД перед дальнейшей обработкой.")
+            db_operations = DatabaseOperations()
+            db_operations.insert_file_name(file_name)  # Записываем имя файла в базу данных
+
+            # Открываем файл и начинаем его обработку
             with open(file_path, "r", encoding="utf-8") as file:
                 xml_content = file.read()
 
@@ -78,36 +92,28 @@ def process_okpd_files(folder_path, region_code):
                     logger.debug(f"Код ОКПД после изменения: {okpd_code}")
 
                 # Если код состоит из большего количества частей, например, 21.11.00.25
-                elif len(okpd_code.split('.')) > 2:
-                    logger.debug(f"Код ОКПД {okpd_code} имеет больше частей.")
+                exists_in_db = db_id_fetcher.get_okpd_id(okpd_code)
+                if exists_in_db:
+                    logger.debug(f"Код ОКПД {okpd_code} найден в базе данных.")
 
-                    exists_in_db = db_manager.check_okpd_in_db(okpd_code)
-                    if exists_in_db:
-                        logger.info(f"Код ОКПД {okpd_code} найден в базе данных.")
+                    # Вместо передачи папки передаем только файл
+                    xml_parser = XMLParser(config_path="config.ini")
+                    xml_parser.parse_xml_tags(file_path, region_code, okpd_code, folder_path)
 
-                        # Проверяем, если файл уже есть в БД, удаляем его и переходим к следующему файлу
-                        file_id = db_id_fetcher.get_file_names_xml_id(file_name)
+                    # Задержка перед удалением файла, чтобы дать время на запись в БД
+                    time.sleep(0.15)  # 1 секунда задержки (можно настроить по необходимости)
 
-                        if file_id:  # Если файл уже есть в БД
-                            logger.info(f"Файл {file_name} уже был записан в БД. Завершаем обработку.")
-                            file_deleter.delete_single_file(file_path)
-                            continue  # Переходим к следующему файлу
-                        else:
-                            # Если файла нет в БД, выполняем дальнейшую обработку
-                            logger.info(f"Файл {file_name} не найден в базе данных, выполняем дальнейшую обработку.")
-                            xml_parser = XMLParser(config_path="config.ini")
-                            xml_parser.parse_xml_tags(os.path.dirname(file_path), region_code, okpd_code)
+                    # Удаляем файл после обработки
+                    file_deleter.delete_single_file(file_path)
 
-                            # Задержка перед удалением файла, чтобы дать время на запись в БД
-                            time.sleep(1)  # 1 секунда задержки (можно настроить по необходимости)
+                else:
+                    logger.info(f"Код ОКПД {okpd_code} не найден в базе данных, файл будет удален.")
 
-                            # Удаляем файл после обработки
-                            file_deleter.delete_single_file(file_path)
-                            # logger.error(f'файл {file_path} удален')
-                    else:
-                        logger.info(f"Код ОКПД {okpd_code} не найден в базе данных, файл будет удален.")
-                        file_deleter.delete_single_file(file_path)
-                        continue  # Прекращаем обработку файла, если код не найден в базе
+                    # Задержка перед удалением файла, чтобы дать время на запись в БД
+                    time.sleep(0.15)  # 1 секунда задержки (можно настроить по необходимости)
+
+                    file_deleter.delete_single_file(file_path)
+                    continue  # Прекращаем обработку файла, если код не найден в базе
 
             else:
                 logger.warning(f"Не найден код ОКПД в файле {file_name}")

@@ -9,7 +9,7 @@ from secondary_functions import load_config
 from database_work.check_database import DatabaseCheckManager
 from database_work.database_operations import DatabaseOperations
 from database_work.database_id_fetcher import DatabaseIDFetcher
-
+from file_delete.file_deleter import FileDeleter
 
 class XMLParser:
     """
@@ -20,8 +20,6 @@ class XMLParser:
         """
         Загружает конфигурацию и путь к XML-файлам из config.ini.
         """
-
-        logger.add("errors.log", level="ERROR", rotation="10 MB", compression="zip")
 
         # Инициализируем методы для работы с базой данных внутри XMLParser
         self.database_check_manager = DatabaseCheckManager()
@@ -64,19 +62,69 @@ class XMLParser:
             logger.error(f"Ошибка при загрузке JSON файла с тегами {tags_path}: {e}")
             return None
 
-    def parse_reestr_contract(self, root, tags, region_code, okpd_code, customer_id, platform_id, tags_file):
+    def parse_reestr_contract_44_fz(self, root, tags, region_code, okpd_code, customer_id, platform_id, tags_file,
+                                    file_path, xml_folder_path):
         """
-        Парсит данные для таблицы реестра контрактов и вставляет в БД.
-        Также добавляет customer_id и platform_id.
+        Парсит данные для таблицы реестра контрактов 44-ФЗ и вставляет в БД.
+        Если поле 'auction_name' пустое, прекращает обработку и удаляет файл через FileDeleter.
         """
+        found_tags = self._parse_common_contract_data(root, tags, region_code, okpd_code, customer_id, platform_id,
+                                                      tags_file)
 
+        # Проверяем, что поле auction_name не пустое
+        if not found_tags.get('auction_name'):
+            logger.warning(f"Поле 'auction_name' пустое для файла: {tags_file}. Прекращаем обработку и удаляем файл.")
+
+            # Удаляем файл через FileDeleter
+            file_deleter = FileDeleter(xml_folder_path)
+            file_deleter.delete_single_file(file_path)
+            logger.info(f"Файл {tags_file} удален.")
+
+            # Прекращаем дальнейшую обработку
+            return None
+
+        # Если значение поля 'auction_name' присутствует, продолжаем вставку данных
+        contract_id = self.database_operations.insert_reestr_contract_44_fz(found_tags)
+        logger.info(f"Вставленная запись для 44-ФЗ имеет id: {contract_id}")
+
+        return contract_id
+
+    def parse_reestr_contract_223_fz(self, root, tags, region_code, okpd_code, customer_id, platform_id, tags_file,
+                                     file_path, xml_folder_path):
+        """
+        Парсит данные для таблицы реестра контрактов 223-ФЗ и вставляет в БД.
+        """
+        # Парсим общие данные контракта
+        found_tags = self._parse_common_contract_data(root, tags, region_code, okpd_code, customer_id, platform_id,
+                                                      tags_file)
+
+        # Проверяем, если нет значения для contract_number, пропускаем обработку и удаляем файл
+        if not found_tags.get('contract_number'):
+            logger.warning(f"Отсутствует contract_number в файле {tags_file}. Пропускаем файл и удаляем его.")
+
+            # Удаляем файл через FileDeleter
+            file_deleter = FileDeleter(xml_folder_path)
+            file_deleter.delete_single_file(file_path)
+            logger.info(f"Файл {tags_file} удален.")
+
+            # Прекращаем дальнейшую обработку
+            return None
+
+        # Вставляем данные в таблицу reestr_contract_223_fz
+        contract_id = self.database_operations.insert_reestr_contract_223_fz(found_tags)
+        logger.info(f"Вставленная запись для 223-ФЗ имеет id: {contract_id}")
+
+        return contract_id
+
+    def _parse_common_contract_data(self, root, tags, region_code, okpd_code, customer_id, platform_id, tags_file):
+        """
+        Общая логика парсинга данных для контрактов, используемая для 44-ФЗ и 223-ФЗ.
+        """
         found_tags = {}
 
+        # Парсинг общих данных
         for tag, xpath in tags.items():
-            # Убираем пространство имен из пути
             tag_without_namespace = xpath.split(":")[-1]
-
-            # Ищем тег на любом уровне
             elements = root.findall(f".//{tag_without_namespace}")
 
             if elements:
@@ -85,16 +133,14 @@ class XMLParser:
             else:
                 found_tags[tag] = None
 
-            # Если поле start_date пустое или не найдено, ТУТ НАДО ПЕРЕДАВАТЬ ДАННЫЕ ПО ДАТЕ КОГДА ПАРСИМ ДАННЫЕ
-            if tag == "start_date" and (found_tags[tag] is None or found_tags[tag] == ""):
-                found_tags[tag] = datetime.now().strftime('%Y-%m-%d')  # Форматируем текущую дату
+            # Обрабатываем start_date, end_date и initial_price
+            if tag == "start_date" and not found_tags[tag]:
+                found_tags[tag] = datetime.now().strftime('%Y-%m-%d')
 
-            # Если поле end_date пустое или не найдено, ставим текущую дату
-            if tag == "end_date" and (found_tags[tag] is None or found_tags[tag] == ""):
-                found_tags[tag] = datetime.now().strftime('%Y-%m-%d')  # Форматируем текущую дату
+            if tag == "end_date" and not found_tags[tag]:
+                found_tags[tag] = datetime.now().strftime('%Y-%m-%d')
 
-            # Если поле initial_price пустое или не найдено, ставим 0
-            if tag == "initial_price" and (found_tags[tag] is None or found_tags[tag] == ""):
+            if tag == "initial_price" and not found_tags[tag]:
                 found_tags[tag] = 0
 
         # Добавляем дополнительные параметры
@@ -103,18 +149,7 @@ class XMLParser:
         found_tags['customer_id'] = customer_id
         found_tags['trading_platform_id'] = platform_id
 
-        # Выбираем правильную функцию вставки в БД
-        if tags_file == self.tags_paths['get_tags_44_new']:
-            contract_id = self.database_operations.insert_reestr_contract_44_fz(found_tags)
-        elif tags_file == self.tags_paths['get_tags_223_new']:
-            contract_id = self.database_operations.insert_reestr_contract_223_fz(found_tags)
-        else:
-            logger.error(f"Неизвестный файл тегов: {tags_file}")
-            return None
-
-        logger.info(f"Вставленная запись имеет id: {contract_id}")
-
-        return contract_id
+        return found_tags
 
     def parse_trading_platform(self, root, tags):
         """
@@ -145,9 +180,12 @@ class XMLParser:
 
         # Если площадки нет в БД, создаем новую запись
         found_tags['trading_platform_name'] = trading_platform_name
-        found_tags['trading_platform_url'] = found_tags.get('trading_platform_url',
-                                                            "https://нет.ссылки")  # Устанавливаем дефолтный URL
 
+        # Проверяем наличие URL, если его нет, ставим дефолтный
+        if not found_tags.get('trading_platform_url'):
+            found_tags['trading_platform_url'] = "https://нет.ссылки"  # Устанавливаем дефолтный URL
+
+        # Вставляем данные в таблицу
         platform_id = self.database_operations.insert_trading_platform(found_tags)
 
         if platform_id:
@@ -156,61 +194,6 @@ class XMLParser:
             logger.error(f"Не удалось добавить торговую площадку '{trading_platform_name}' в БД.")
 
         return platform_id  # Возвращаем ID, который был найден или создан
-
-    def parse_customer(self, root, tags, tags_file):
-        """
-        Парсит данные для таблицы customer, проверяя наличие ИНН в базе данных.
-        Если ИНН существует, обновляет данные, если нет — добавляет нового заказчика.
-        """
-        found_tags = {}
-
-        for tag, xpath in tags.items():
-            element = root.find(f".//{xpath}")
-
-            if element is None or element.text is None:
-                found_tags[tag] = None
-                continue
-
-            if tags_file == self.tags_paths['get_tags_44_new']:
-                # Логируем перед вызовом strip(), чтобы понять, что там лежит
-                try:
-                    found_tags[tag] = element.text.strip()
-                except AttributeError:
-                    logger.error(f"Ошибка при обработке тега '{tag}': element.text = {element.text}")
-                    found_tags[tag] = None  # Чтобы не упасть дальше, если будет ошибка
-                else:
-                    logger.info(f"Тег '{tag}' успешно обработан: {found_tags[tag]}")
-
-            elif tags_file == self.tags_paths['get_tags_223_new']:
-                # В 223-ФЗ длинные текстовые блоки, их оставляем как есть
-                found_tags[tag] = element.text
-
-            else:
-                logger.error(f"Неизвестный файл тегов: {tags_file}")
-                return None
-
-        # Проверяем наличие ИНН
-        inn = found_tags.get('customer_inn')
-        customer_id = None
-
-        if inn:
-            customer_data = found_tags
-            customer_id = self.db_id_fetcher.get_customer_id(inn)
-
-            if customer_id:
-                logger.info(f"Обновляем данные заказчика с ID {customer_id}")
-                self.database_operations.update_customer(customer_data, customer_id, tags_file)
-            else:
-                logger.info(f"Заказчик с ИНН {inn} не найден, создаем нового.")
-                customer_id = self.database_operations.insert_customer(customer_data, tags_file)
-                if customer_id:
-                    logger.info(f"Новый заказчик добавлен с ID {customer_id}")
-                else:
-                    logger.error(f"Не удалось добавить нового заказчика с ИНН {inn}")
-        else:
-            logger.warning("ИНН не найден в данных.")
-
-        return customer_id
 
     def parse_links_documentation(self, root, tags, contract_id, tags_file):
         """
@@ -275,111 +258,152 @@ class XMLParser:
         # Возвращаем все найденные данные
         return found_tags
 
-    def parse_document(self, root, tags):
+    def parse_customer(self, root, tags, tags_file):
         """
-        Парсит данные для таблицы document.
+        Парсит данные для таблицы customer, проверяя наличие ИНН в базе данных.
+        Если ИНН существует, обновляет данные, если нет — добавляет нового заказчика.
         """
         found_tags = {}
 
-        for tag, tag_info in tags.items():
-            if isinstance(tag_info, dict) and 'xpath' in tag_info:
-                xpath = tag_info['xpath']
-                element = root.find(xpath)
+        for tag, xpath in tags.items():
+            element = root.find(f".//{xpath}")
 
-                if element is not None and element.text:
-                    found_tags[tag] = element.text.strip()
-                    # logger.info(f"Тег: {tag} содержит значение: {found_tags[tag]}")
+            if element is None or element.text is None:
+                found_tags[tag] = None
+                logger.warning(f"Не найден тег '{tag}' в XML.")
+                continue
+
+            try:
+                if tags_file == self.tags_paths['get_tags_44_new']:
+                    found_tags[tag] = element.text.strip() if element.text else None
+                elif tags_file == self.tags_paths['get_tags_223_new']:
+                    found_tags[tag] = element.text
                 else:
-                    found_tags[tag] = None
+                    logger.error(f"Неизвестный файл тегов: {tags_file}")
+                    return None
 
-        return found_tags
+            except AttributeError:
+                logger.error(f"Ошибка при обработке тега '{tag}': element.text = {element.text}")
+                found_tags[tag] = None
 
-    def parse_xml_tags(self, xml_folder_path, region_code, okpd_code):
+        # Проверяем наличие ИНН
+        inn = found_tags.get('customer_inn')
+        if inn:
+            customer_id = self.db_id_fetcher.get_customer_id(inn)
+
+            if customer_id:
+                # Закомментировать следующую часть, чтобы отключить обновление данных
+                # logger.info(f"Обновляем данные заказчика с ID {customer_id}")
+                # customer_data = found_tags
+                # self.database_operations.update_customer(customer_data, customer_id, tags_file)
+
+                # Логирование, что обновление отключено
+                logger.info(f"Обновление данных заказчика с ID {customer_id} временно отключено.")
+            else:
+                # Создаем нового заказчика, если не найден
+                logger.info(f"Заказчик с ИНН {inn} не найден, создаем нового.")
+                customer_data = found_tags
+                customer_id = self.database_operations.insert_customer(customer_data, tags_file)
+                if customer_id:
+                    logger.info(f"Новый заказчик добавлен с ID {customer_id}")
+                else:
+                    logger.error(f"Не удалось добавить нового заказчика с ИНН {inn}")
+        else:
+            logger.warning("ИНН не найден в данных.")
+
+        return customer_id
+
+    def parse_xml_tags(self, file_path, region_code, okpd_code, xml_folder_path):
         """
-        Функция для извлечения тегов для каждой таблицы из XML-файлов.
+        Функция для извлечения тегов для одной записи XML.
+        :param file_path: Путь к конкретному XML файлу для обработки
+        :param region_code: Код региона
+        :param okpd_code: Код ОКПД для обработки
         """
-        logger.info(f"Текущий путь: {xml_folder_path}")
+        logger.info(f"Обрабатываем файл: {file_path}")
 
         # Определяем, какой JSON файл использовать в зависимости от папки
         if xml_folder_path == self.xml_paths['reest_new_contract_archive_44_fz_xml']:
             tags_file = self.tags_paths['get_tags_44_new']
-        # elif xml_folder_path == self.xml_paths['recouped_contract_archive_44_fz_xml']:
-        #     tags_file = self.tags_paths['get_tags_44_recouped']
         elif xml_folder_path == self.xml_paths['reest_new_contract_archive_223_fz_xml']:
             tags_file = self.tags_paths['get_tags_223_new']
-        # elif xml_folder_path == self.xml_paths['recouped_contract_archive_223_fz_xml']:
-        #     tags_file = self.tags_paths['get_tags_223_recouped']
         else:
             logger.error(f"Неизвестная папка: {xml_folder_path}")
             return None
 
         # Загружаем теги из соответствующего JSON файла
+        tags = self.load_json_tags(tags_file)  # Определение файла тегов по пути
+
+        if not tags_file:
+            logger.error(f"Не удалось найти файл тегов для файла {file_path}")
+            return None
+
         tags = self.load_json_tags(tags_file)
         if not tags:
             logger.error("Не удалось загрузить теги из JSON.")
             return None
 
-        # Перебираем все XML-файлы в указанной папке
-        for xml_file in os.listdir(xml_folder_path):
-            if xml_file.endswith(".xml"):
-                file_path = os.path.join(xml_folder_path, xml_file)
-                logger.info(f"Обрабатываем файл: {file_path}")
+        # Загружаем и парсим XML
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                xml_content = f.read()
 
-                # Загружаем и парсим XML
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        xml_content = f.read()
+            # Удаляем пространства имен перед парсингом
+            cleaned_xml_content = self.remove_namespaces(xml_content)
 
-                    # Удаляем пространства имен перед парсингом
-                    cleaned_xml_content = self.remove_namespaces(xml_content)
+            tree = ET.ElementTree(ET.fromstring(cleaned_xml_content))
+            root = tree.getroot()
 
-                    tree = ET.ElementTree(ET.fromstring(cleaned_xml_content))
-                    root = tree.getroot()
+        except ET.ParseError as e:
+            logger.error(f"Ошибка при парсинге XML-файла {file_path}: {e}")
+            return
 
-                except ET.ParseError as e:
-                    logger.error(f"Ошибка при парсинге XML-файла {file_path}: {e}")
-                    continue
+        # Получаем данные о заказчике
+        customer_id = self.parse_customer(
+            root,
+            tags.get('customer', {}),
+            tags_file  # Передаем сюда tags_file
+        )
 
-                # Получаем данные о заказчике
-                customer_id = self.parse_customer(
-                    root,
-                    tags.get('customer', {}),
-                    tags_file  # Передаем сюда tags_file
-                )
-                # logger.debug(f'id заказчика: {customer_id}')
+        # Получаем данные о торговой площадке
+        platform_id = self.parse_trading_platform(root, tags.get('trading_platform', {}))
 
-                # Получаем данные о торговой площадке
-                platform_id = self.parse_trading_platform(root, tags.get('trading_platform', {}))
-                # logger.debug(f'id платформы: {platform_id}')
+        # Выбираем правильную функцию для контракта
+        if tags_file == self.tags_paths['get_tags_44_new']:
+            contract_id = self.parse_reestr_contract_44_fz(
+                root,
+                tags.get('reestr_contract', {}),
+                region_code,
+                okpd_code,
+                customer_id,  # Передаем customer_id
+                platform_id,
+                tags_file,
+                file_path,
+                xml_folder_path
+            )
+        elif tags_file == self.tags_paths['get_tags_223_new']:
+            contract_id = self.parse_reestr_contract_223_fz(
+                root,
+                tags.get('reestr_contract', {}),
+                region_code,
+                okpd_code,
+                customer_id,  # Передаем customer_id
+                platform_id,
+                tags_file,
+                file_path,
+                xml_folder_path
+            )
 
-                # Передаем правильные данные для реестра контрактов
-                contract_id = self.parse_reestr_contract(
-                    root,
-                    tags.get('reestr_contract', {}),
-                    region_code,
-                    okpd_code,
-                    customer_id,  # Передаем уже customer_id, а не customer_inn
-                    platform_id,
-                    tags_file  # Передаем сюда tags_file
-                )
+        if not contract_id:
+            logger.info(f"Пропускаем файл {file_path} из-за отсутствия contract_number")
+            return
 
-                # Парсим данные для таблицы links_documentation_44_fz
-                links_documentation = self.parse_links_documentation(
-                    root,
-                    tags.get('links_documentation', {}),
-                    contract_id,
-                    tags_file  # Передаем сюда tags_file
-                )
-                logger.debug(f'Найденные записи для links_documentation_44_fz: {links_documentation}')
+        # Парсим ссылки и документацию
+        links_documentation = self.parse_links_documentation(
+            root,
+            tags.get('links_documentation', {}),
+            contract_id,
+            tags_file
+        )
 
-                # Если необходимо, добавляй остальные данные, как ссылки и другие формы
-                # found_tags.update(self.parse_links_documentation(root, tags.get('links_documentation', {})))
-                # found_tags.update(self.parse_print_form_info(root, tags.get('links_documentation', {})))
-
-                # Можно дополнительно сделать запись или другие действия с данными
-                logger.info(f"Успешно обработан для файла {xml_file}")
-
-# # # Пример использования
-# xml_parser = XMLParser()
-# xml_folder_path = r"F:\Программирование\Парсинг ЕИС\223_FZ\xml_reestr_223_fz_new_contracts"  # Укажи нужную папку
-# parsed_data = xml_parser.parse_xml_tags(xml_folder_path)
+        logger.info(f"Успешно обработан файл {file_path}")

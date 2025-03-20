@@ -22,7 +22,6 @@ class DatabaseCheckManager:
         Использует `DatabaseManager` для взаимодействия с базой данных и
         `DatabaseIDFetcher` для получения ID заказчика.
         """
-        logger.add("errors.log", level="ERROR", rotation="10 MB", compression="zip")
 
         self.db_manager = DatabaseManager()
         self.id_fetcher = DatabaseIDFetcher()
@@ -59,7 +58,10 @@ class DatabaseCheckManager:
             );
             """
             result = self.db_manager.fetch_one(query, (okpd_code_sub,))
-            return bool(result)  # Приведение к bool на случай None
+
+            # Если результат возвращает False, значит код не найден
+            return result is not False
+
         except Exception as e:
             logger.exception(f"Ошибка при проверке ОКПД: {e}")
             return False

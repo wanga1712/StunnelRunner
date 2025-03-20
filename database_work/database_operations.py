@@ -5,7 +5,6 @@ from secondary_functions import load_config
 
 class DatabaseOperations:
     def __init__(self, config_path="config.ini"):
-        logger.add("errors.log", level="ERROR", rotation="10 MB", compression="zip")
         self.db_manager = DatabaseManager()
 
         self.config = load_config(config_path)
@@ -18,9 +17,9 @@ class DatabaseOperations:
         """Подготовка поля contact (ФИО) для записи."""
         if tags_file == self.tags_paths['get_tags_44_new']:
             contact_parts = [
-                customer_data.get("contact_last_name", "").strip(),
-                customer_data.get("contact_first_name", "").strip(),
-                customer_data.get("contact_middle_name", "").strip()
+                (customer_data.get("contact_last_name") or "").strip(),
+                (customer_data.get("contact_first_name") or "").strip(),
+                (customer_data.get("contact_middle_name") or "").strip()
             ]
         elif tags_file == self.tags_paths['get_tags_223_new']:
             contact_parts = [
@@ -180,6 +179,28 @@ class DatabaseOperations:
             self.db_manager.connection.rollback()
             return None
 
+    def insert_file_name(self, file_name):
+        """Вставляет имя обработанного XML-файла в таблицу file_names_xml."""
+        try:
+            cursor = self.db_manager.cursor
+            insert_query = """
+                INSERT INTO file_names_xml (file_name)
+                VALUES (%s) RETURNING id;
+            """
+            cursor.execute(insert_query, (file_name,))
+            inserted_id = cursor.fetchone()[0]
+            self.db_manager.connection.commit()
+
+            logger.info(f"Добавлено имя файла в file_names_xml с id: {inserted_id}")
+            return inserted_id
+
+        except IntegrityError as e:
+            logger.warning(f"Ошибка при вставке имени файла {file_name} в file_names_xml: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Ошибка при вставке имени файла {file_name}: {e}")
+            self.db_manager.connection.rollback()
+            return None
 
     # Пример вставки в другие таблицы, аналогично insert_customer
     def insert_trading_platform(self, trading_platform_data):
