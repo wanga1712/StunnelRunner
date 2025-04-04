@@ -11,7 +11,7 @@ class DatabaseCheckManager:
 
     Этот класс включает методы для:
     - Проверки существования ОКПД в базе данных.
-    - Проверки, записано ли имя файла в таблице `file_names_xml`.
+    - Проверки, записано ли имя файла в таблице `file_names_xml`..
     - Проверки ИНН заказчика и получения его ID из базы данных.
     """
 
@@ -42,29 +42,38 @@ class DatabaseCheckManager:
         """
         self.db_manager.close()
 
-    def check_okpd_in_db(self, okpd_code_sub):
+    def check_contract_number_44_fz(self, contract_number_44_fz):
         """
-        Проверяет, существует ли код ОКПД в базе данных.
+        Проверяет, существует ли номер контракта 44-ФЗ в базе данных.
 
-        :param okpd_code_sub: Код ОКПД (sub_code), который необходимо проверить.
-        :return: True, если код найден в базе данных, иначе False.
+        :param contract_number_44_fz: Номер контракта 44-ФЗ для проверки.
+        :return: True, если контракт найден, иначе False.
         """
+        cursor = None
         try:
             query = """
             SELECT EXISTS(
                 SELECT 1 
-                FROM collection_codes_okpd 
-                WHERE sub_code = %s
+                FROM reestr_contract_44_fz 
+                WHERE contract_number = %s
             );
             """
-            result = self.db_manager.fetch_one(query, (okpd_code_sub,))
+            cursor = self.db_manager.cursor  # Получаем курсор
+            cursor.execute(query, (contract_number_44_fz,))
+            result = cursor.fetchone()
 
-            # Если результат возвращает False, значит код не найден
-            return result is not False
+            # Если результат возвращает False, значит контракт не найден
+            return result[0] if result else False
 
         except Exception as e:
-            logger.exception(f"Ошибка при проверке ОКПД: {e}")
+            logger.exception(f"Ошибка при проверке номера контракта 44-ФЗ: {e}")
             return False
+
+        finally:
+            if cursor:
+                cursor.close()  # Закрываем курсор вручную
+            self.db_manager.connection.close()  # Закрываем соединение вручную
+
 
     # Удалить за ненадобностью после проверки
     # def check_inn_and_get_id_customer(self, inn):

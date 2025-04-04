@@ -14,6 +14,7 @@ class StunnelRunner:
         :raises ValueError: Если не удается загрузить конфигурацию.
         :raises FileNotFoundError: Если не найден файл stunnel_msspi.exe по указанному пути.
         """
+        
         # Загружаем настройки из конфигурации
         self.config = load_config(config_path)
         if not self.config:

@@ -19,6 +19,7 @@ class FileDownloader:
         :param config_path: Путь к конфигурационному файлу (по умолчанию "config.ini").
         :raises ValueError: Если конфигурация или токен не могут быть загружены.
         """
+
         # Загружаем настройки из конфигурации
         self.config = load_config(config_path)
         if not self.config:

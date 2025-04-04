@@ -27,7 +27,6 @@ class DatabaseManager:
         Исключения:
             Exception: В случае ошибки подключения к базе данных.
         """
-        logger.add("errors.log", level="ERROR", rotation="10 MB", compression="zip")
 
         # Загружаем переменные окружения из файла .env
         load_dotenv(dotenv_path=r'C:\Users\wangr\PycharmProjects\TenderMonitor\database_work\db_credintials.env')

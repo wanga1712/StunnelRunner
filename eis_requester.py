@@ -22,6 +22,7 @@ class EISRequester:
         :param config_path: Путь к конфигурационному файлу. По умолчанию "config.ini".
         :raises ValueError: Если загрузка конфигурации не удалась.
         """
+
         # Загружаем настройки из конфигурации
         self.config = load_config(config_path)
         if not self.config:

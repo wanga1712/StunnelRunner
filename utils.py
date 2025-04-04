@@ -23,9 +23,12 @@ class XMLParser:
             urls = [url.text for url in tree.xpath("//archiveUrl")]
 
             return urls
-        except Exception as e:
+        except etree.XMLSyntaxError as e:
             # Логируем ошибку, если произошла ошибка при парсинге XML
             logger.error(f"Ошибка при парсинге XML: {e}")
             return []  # Возвращаем пустой список в случае ошибки
-
+        except Exception as e:
+            # Логируем любую другую ошибку
+            logger.error(f"Неизвестная ошибка: {e}")
+            return []  # Возвращаем пустой список в случае ошибки
 

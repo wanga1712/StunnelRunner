@@ -14,6 +14,9 @@ PROCESSED_DATES_FILE = "processed_dates.json"
 START_DATE = datetime(2024, 1, 11)  # Начальная дата
 TODAY = datetime.today()  # Текущая дата
 
+# Настройка логирования в одном месте
+logger.add("errors.log", level="ERROR", rotation="1 week", compression="zip")
+
 def load_processed_dates():
     """Загружает список уже обработанных дат из JSON-файла."""
     if os.path.exists(PROCESSED_DATES_FILE):

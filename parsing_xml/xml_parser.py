@@ -1,4 +1,3 @@
-import os
 import json
 import xml.etree.ElementTree as ET
 from loguru import logger
@@ -6,7 +5,6 @@ import re
 from datetime import datetime
 
 from secondary_functions import load_config
-from database_work.check_database import DatabaseCheckManager
 from database_work.database_operations import DatabaseOperations
 from database_work.database_id_fetcher import DatabaseIDFetcher
 from file_delete.file_deleter import FileDeleter
@@ -22,7 +20,6 @@ class XMLParser:
         """
 
         # Инициализируем методы для работы с базой данных внутри XMLParser
-        self.database_check_manager = DatabaseCheckManager()
         self.database_operations = DatabaseOperations()
         self.db_id_fetcher = DatabaseIDFetcher()
 
@@ -40,6 +37,7 @@ class XMLParser:
         Полностью удаляет все пространства имен из XML-строки.
         Убирает как префиксы, так и их определения.
         """
+        logger.warning('запуск функции: remove_namespaces')
         # Удаление всех атрибутов xmlns:... и xmlns="..."
         no_namespaces = re.sub(r'\sxmlns(:\w+)?="[^"]+"', '', xml_string)
 
@@ -195,53 +193,40 @@ class XMLParser:
 
         return platform_id  # Возвращаем ID, который был найден или создан
 
-    def parse_links_documentation(self, root, tags, contract_id, tags_file):
+    def parse_links_documentation(self, root, links_documentation_tags, contract_id, tags_file):
         """
         Парсит данные для таблицы links_documentation_44_fz (или 223_fz)
         и вызывает парсинг для таблицы printFormInfo.
         """
-        found_tags = []  # Список для хранения данных links_documentation_44_fz или links_documentation_223_fz
+        found_tags = []
 
-        # Работаем с разделом links_documentation из переданных тегов
-        links_doc_tags = tags  # Теперь мы используем переданный параметр tags напрямую
+        for tag_name, tag_data in links_documentation_tags.items():
+            xpath = tag_data.get("xpath")
+            if not xpath:
+                logger.warning(f"Отсутствует xpath в секции {tag_name}")
+                continue
 
-        # Обрабатываем ссылки для printFormInfo
-        if 'printFormInfo' in links_doc_tags:
-            print_form_info = links_doc_tags['printFormInfo']
-            xpath = print_form_info.get('xpath')
-            if xpath:
-                elements = root.findall(xpath)
-                for elem in elements:
-                    # Извлекаем информацию о файле и ссылке, если они существуют
-                    file_name = print_form_info.get('default_file_name', "Извещение о проведении электронного аукциона")
-                    url_elem = elem.find(print_form_info.get('document_links'))
-                    if url_elem is not None:
-                        url = url_elem.text.strip() if url_elem.text else None
-                        found_tags.append({
-                            "file_name": file_name,
-                            "document_links": url,
-                            "contract_id": contract_id
-                        })
+            # Ищем элементы по заданному XPath
+            for elem in root.findall(xpath):
+                # Если нет file_name, используем default_file_name, если он есть, или пропускаем
+                file_name_tag = tag_data.get("file_name")
+                if not file_name_tag:
+                    # Если file_name отсутствует, используем default_file_name, если он есть
+                    file_name_tag = tag_data.get("default_file_name", tag_name)
 
-        # Обрабатываем ссылки для attachmentInfo
-        if 'attachmentInfo' in links_doc_tags:
-            attachment_info = links_doc_tags['attachmentInfo']
-            xpath = attachment_info.get('xpath')
-            if xpath:
-                elements = root.findall(xpath)
-                for elem in elements:
-                    # Извлекаем информацию о файле и ссылке
-                    file_name_elem = elem.find(attachment_info.get('file_name'))
-                    url_elem = elem.find(attachment_info.get('document_links'))
-                    if file_name_elem is not None and url_elem is not None:
-                        file_name = file_name_elem.text.strip() if file_name_elem.text else None
-                        url = url_elem.text.strip() if url_elem.text else None
-                        if file_name and url:
-                            found_tags.append({
-                                "file_name": file_name,
-                                "document_links": url,
-                                "contract_id": contract_id
-                            })
+                file_name_elem = elem.find(file_name_tag)
+                url_elem = elem.find(tag_data.get("document_links"))
+
+                file_name = file_name_elem.text.strip() if file_name_elem is not None and file_name_elem.text else file_name_tag
+                url = url_elem.text.strip() if url_elem is not None and url_elem.text else None
+
+                # Если URL найден, добавляем информацию в список
+                if url:
+                    found_tags.append({
+                        "file_name": file_name,
+                        "document_links": url,
+                        "contract_id": contract_id
+                    })
 
         # Вставляем все собранные данные для соответствующей таблицы в базу
         for entry in found_tags:
